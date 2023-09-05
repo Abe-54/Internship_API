@@ -1,0 +1,32 @@
+[
+  {
+    "company_name": "Mock Company One",
+    "locations": ["Mock Location, MO", "Another Location, AL"],
+    "title": "Mock Internship One",
+    "date_posted": 1683864000,
+    "terms": ["Summer 2024"],
+    "active": false,
+    "url": "https://www.mockcompanyone.com/internship",
+    "is_visible": true,
+    "source": "MockSource",
+    "company_url": "",
+    "date_updated": 1691190624,
+    "id": "12345678-1234-1234-1234-123456789012",
+    "sponsorship": "Does Not Offer Sponsorship"
+  },
+  {
+    "source": "MockSource",
+    "company_name": "Mock Company Two",
+    "id": "87654321-4321-4321-4321-876543210987",
+    "title": "Mock Internship Two",
+    "active": true,
+    "terms": ["Summer 2024"],
+    "date_updated": 1689739200,
+    "url": "https://www.mockcompanytwo.com/internship",
+    "locations": ["Yet Another Location, YAL"],
+    "company_url": "https://mock.company.two",
+    "is_visible": true,
+    "date_posted": 1689739200,
+    "sponsorship": "Offers Sponsorship"
+  }
+]

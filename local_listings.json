@@ -8547,18 +8547,18 @@
         "is_visible": true
     },
     {
-        "date_updated": 1692125693,
+        "date_updated": 1693921912,
         "url": "https://www.se.com/ww/en/about-us/careers/job-details/software-engineering-intern--fall-2023-/55765/",
         "company_name": "Schneider Electric",
-        "title": "Software Engineer Intern",
+        "title": "Software Engineer Intern \ud83d\udec2",
         "locations": [
             "Andover, MA"
         ],
         "terms": [
             "Summer 2024"
         ],
-        "sponsorship": "Does Not Offer Sponsorship",
-        "active": true,
+        "sponsorship": "Other",
+        "active": false,
         "source": "leetcodeLover",
         "id": "b28ccc9d-d1dd-46e6-b7d5-cd2ffc68e97c",
         "date_posted": 1692125693,
@@ -14718,20 +14718,20 @@
         "source": "Simplify",
         "company_name": "Maven Securities",
         "id": "f9444a25-4ce3-48a1-bd87-f0f8b9dee10e",
-        "title": "Software Developer Summer Internship London 2024",
+        "title": "Software Developer Summer Internship London 2024 And Trader Summer Internship London 2024",
         "active": true,
         "terms": [
             "Summer 2024"
         ],
-        "date_updated": 1693840343,
+        "date_updated": 1693921933,
         "date_posted": 1693840343,
         "url": "https://boards.greenhouse.io/mavensecuritiesholdingltd/jobs/4947751",
         "locations": [
-            "London, UK"
+            "London"
         ],
         "company_url": "https://simplify.jobs/c/Maven-Securities",
         "is_visible": true,
-        "sponsorship": "Other"
+        "sponsorship": "Does Not Offer Sponsorship"
     },
     {
         "source": "Simplify",

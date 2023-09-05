@@ -1,16 +1,25 @@
 from datetime import datetime, timedelta
 from flask import Flask, jsonify
-from apscheduler.schedulers.background import BackgroundScheduler
+from flask_apscheduler import APScheduler
 import requests
 import json
 import os
 
+TEST_MODE = False
+
 app = Flask(__name__)
+
+scheduler = APScheduler()
+scheduler.api_enabled = True
+scheduler.init_app(app)
+scheduler.start()
 
 # Global variables to store new and removed internships
 new_internships = {}
 removed_internships = {}
 url = "https://raw.githubusercontent.com/SimplifyJobs/Summer2024-Internships/dev/.github/scripts/listings.json"
+local_file_path = "local_listings.json"
+mock_file_path = "mock_listings.json"  # Mock JSON file for testing
 
 # Flask routes
 
@@ -47,16 +56,19 @@ def index():
 
 
 def fetch_json(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        try:
-            return json.loads(response.text)
-        except json.JSONDecodeError as e:
-            print(f"JSON Decode Error: {e}")
-            return None
+    if TEST_MODE:
+        return read_local_json(mock_file_path)
     else:
-        print("Failed to fetch data.")
-        return None
+        response = requests.get(url)
+        if response.status_code == 200:
+            try:
+                return json.loads(response.text)
+            except json.JSONDecodeError as e:
+                print(f"JSON Decode Error: {e}")
+                return None
+        else:
+            print("Failed to fetch data.")
+            return None
 
 
 # Function to read local JSON file
@@ -76,6 +88,7 @@ def convert_dict_to_tuple(d):
     return tuple((k, tuple(v) if isinstance(v, list) else v) for k, v in sorted(d.items()))
 
 
+@scheduler.task('cron', id='check_github_changes', second='*/5')
 # Function to check for changes in GitHub data
 def check_github_changes():
     print("Checking for changes...\n")
@@ -91,6 +104,9 @@ def check_github_changes():
 
         if local_data != latest_data:
             print("Changes detected!\n")
+
+            scheduler.pause()
+
             # Filter internships for the term "Summer 2024"
             latest_data_filtered = [
                 d for d in latest_data if "Summer 2024" in d['terms']]
@@ -102,6 +118,14 @@ def check_github_changes():
                 d) for d in latest_data_filtered}
             local_data_set = {convert_dict_to_tuple(
                 d) for d in local_data_filtered}
+
+            # Find new internships
+            new_internships = [dict(t)
+                               for t in latest_data_set - local_data_set]
+
+            # Find removed internships
+            removed_internships = [dict(t)
+                                   for t in local_data_set - latest_data_set]
 
             # Find and save new internships
             if len(new_internships) > 0:
@@ -131,10 +155,12 @@ def check_github_changes():
 
             # Update the local data
             write_local_json(local_file_path, latest_data)
+            scheduler.resume()
         else:
             print("No changes detected.\n")
 
 
+@scheduler.task('cron', id='clear_json_files', hour=8)
 def clear_json_files():
     empty_list = []
     write_local_json("new_internships_last_24_hours.json", empty_list)
@@ -162,13 +188,4 @@ def get_all_summer_internships():
 
 
 if __name__ == "__main__":
-    local_file_path = "local_listings.json"
-
-    # Schedule the job to run every 5 seconds
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(check_github_changes, 'cron', second='*/5')
-    scheduler.add_job(clear_json_files, 'cron', hour=8)
-    scheduler.start()
-
-    # Start the Flask app
     app.run()
