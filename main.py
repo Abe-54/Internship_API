@@ -10,6 +10,7 @@ app = Flask(__name__)
 # Global variables to store new and removed internships
 new_internships = {}
 removed_internships = {}
+url = "https://raw.githubusercontent.com/SimplifyJobs/Summer2024-Internships/dev/.github/scripts/listings.json"
 
 # Flask routes
 
@@ -161,7 +162,6 @@ def get_all_summer_internships():
 
 
 if __name__ == "__main__":
-    url = "https://raw.githubusercontent.com/SimplifyJobs/Summer2024-Internships/dev/.github/scripts/listings.json"
     local_file_path = "local_listings.json"
 
     # Schedule the job to run every 5 seconds
@@ -171,4 +171,4 @@ if __name__ == "__main__":
     scheduler.start()
 
     # Start the Flask app
-    app.run(port=5000)
+    app.run()
