@@ -88,7 +88,7 @@ def convert_dict_to_tuple(d):
     return tuple((k, tuple(v) if isinstance(v, list) else v) for k, v in sorted(d.items()))
 
 
-@scheduler.task('cron', id='check_github_changes', second='*/5')
+@scheduler.task('cron', id='check_github_changes', hour='*/1')
 # Function to check for changes in GitHub data
 def check_github_changes():
     print("Checking for changes...\n")
@@ -175,9 +175,6 @@ def get_all_summer_internships():
     if all_internships is None:
         print("No internships fetched.")  # Debug line
         return jsonify([])
-
-    for i, internship in enumerate(all_internships[:10]):
-        print(f"Internship {i+1} terms: {internship.get('terms', 'N/A')}")
 
     summer_internships = [
         internship for internship in all_internships if "Summer 2024" in internship.get('terms', [])]
