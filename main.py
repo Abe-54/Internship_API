@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from flask import Flask, jsonify
 from flask_apscheduler import APScheduler
+from flask_cors import CORS
 import requests
 import json
 import os
@@ -8,6 +9,7 @@ import os
 TEST_MODE = False
 
 app = Flask(__name__)
+CORS(app)
 
 scheduler = APScheduler()
 scheduler.api_enabled = True
