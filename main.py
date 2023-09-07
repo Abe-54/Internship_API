@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from flask import Flask, jsonify
+import queue
+from flask import Flask, Response, jsonify
 from flask_apscheduler import APScheduler
 from flask_cors import CORS
 import requests
@@ -22,14 +23,25 @@ removed_internships = {}
 url = "https://raw.githubusercontent.com/SimplifyJobs/Summer2024-Internships/dev/.github/scripts/listings.json"
 local_file_path = "local_listings.json"
 mock_file_path = "mock_listings.json"  # Mock JSON file for testing
+clients = []
 
 # Flask routes
 
 
 @app.route('/new_internships', methods=['GET'])
 def get_new_internships():
-    print(read_local_json("new_internships_last_24_hours.json"))
-    return jsonify(read_local_json("new_internships_last_24_hours.json"))
+    def generate():
+        global clients
+        q = queue.Queue()
+        clients.append(q)
+        try:
+            while True:
+                result = q.get()  # This will block until a new item is available
+                yield f"data: {json.dumps(result)}\n\n"
+        except GeneratorExit:  # Happens when the client disconnects
+            clients.remove(q)
+
+    return Response(generate(), content_type='text/event-stream')
 
 # Flask route to get removed internships from the last 24 hours
 
@@ -42,7 +54,11 @@ def get_removed_internships():
 
 @app.route('/all_internships', methods=['GET'])
 def get_all_internships():
+<<<<<<< HEAD
     print("Internships Found: " + len(fetch_json(url)))
+=======
+    print(len(fetch_json(url)))
+>>>>>>> 6fb6c9d3ff602a7cfad16f5745b4e7eaa73fddce
     return jsonify(fetch_json(url))
 
 
@@ -134,6 +150,10 @@ def check_github_changes():
             if len(new_internships) > 0:
                 for internship in new_internships:
                     internship['timestamp'] = current_time.isoformat()
+
+                    # Notify all SSE clients about the new internships
+                for client in clients:
+                    client.put(new_internships)
 
                 # Filter and write internships from the last 24 hours
                 last_24_hours = current_time - timedelta(days=1)
