@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta
 from flask import Flask, jsonify
 from flask_apscheduler import APScheduler
+from flask_cors import CORS
 import requests
 import json
 import os
 
-TEST_MODE = False
+TEST_MODE = True
 
 app = Flask(__name__)
+CORS(app)
 
 scheduler = APScheduler()
 scheduler.api_enabled = True
@@ -40,6 +42,7 @@ def get_removed_internships():
 
 @app.route('/all_internships', methods=['GET'])
 def get_all_internships():
+    print("Internships Found: " + len(fetch_json(url)))
     return jsonify(fetch_json(url))
 
 
@@ -88,7 +91,7 @@ def convert_dict_to_tuple(d):
     return tuple((k, tuple(v) if isinstance(v, list) else v) for k, v in sorted(d.items()))
 
 
-@scheduler.task('cron', id='check_github_changes', hour='*/1')
+@scheduler.task('cron', id='check_github_changes', second='*/5')
 # Function to check for changes in GitHub data
 def check_github_changes():
     print("Checking for changes...\n")
