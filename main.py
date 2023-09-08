@@ -227,7 +227,8 @@ def get_all_summer_internships():
     return jsonify(summer_internships)
 
 
+send_email("New Internships Added",
+           f"New internships: test")
+
 if __name__ == "__main__":
-    send_email("New Internships Added",
-               f"New internships: test")
     app.run()
