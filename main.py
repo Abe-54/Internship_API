@@ -228,6 +228,6 @@ def get_all_summer_internships():
 
 
 if __name__ == "__main__":
-    app.run()
     send_email("New Internships Added",
                f"New internships: test")
+    app.run()
