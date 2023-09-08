@@ -10,7 +10,7 @@ import json
 import os
 import resend
 
-TEST_MODE = False  # Set to True to use mock JSON file for testing
+TEST_MODE = True  # Set to True to use mock JSON file for testing
 
 app = Flask(__name__)
 resend.api_key = "re_4xqsTDGK_AjPwBCJ77WVuSAE2E3bHrSSq"
@@ -25,11 +25,8 @@ scheduler.start()
 new_internships = {}
 removed_internships = {}
 url = "https://raw.githubusercontent.com/SimplifyJobs/Summer2024-Internships/dev/.github/scripts/listings.json"
-local_file_path = "local_listings.json"
-mock_file_path = "mock_listings.json"  # Mock JSON file for testing
-
-# Email configuration
-RECIPIENT_EMAIL = "a.rubio1224@gmail.com"  # Email to receive notifications
+local_file_path = "internships/local_listings.json"
+mock_file_path = "internships/mock_listings.json"  # Mock JSON file for testing
 
 # Flask routes
 
@@ -67,35 +64,26 @@ def index():
 
 
 def fetch_json(url):
-    if TEST_MODE:
-        return read_local_json(mock_file_path)
-    else:
-        response = requests.get(url)
-        if response.status_code == 200:
-            try:
-                return json.loads(response.text)
-            except json.JSONDecodeError as e:
-                print(f"JSON Decode Error: {e}")
-                return None
-        else:
-            print("Failed to fetch data.")
-            return None
+    response = requests.get(url)
+    return json.loads(response.text) if response.status_code == 200 else None
 
 
-def send_email(subject, body, attachments=None):
+def convert_to_html_bulleted_list(internships):
+    return '<ul>' + ''.join([f"<li>{internship['title']} at {internship['company_name']}</li>" for internship in internships]) + '</ul>'
+
+
+def send_email(subject, internships):
     """Send an email notification using resend."""
+    body = convert_to_html_bulleted_list(internships)
     params = {
         "from": "Internship Tracker <onboarding@resend.dev>",
-        "to": [RECIPIENT_EMAIL],
+        "to": ["a.rubio1224@gmail.com"],
         "subject": subject,
         "html": body,
         "headers": {
             "X-Entity-Ref-ID": "123456789"
         }
     }
-
-    if attachments:
-        params["attachments"] = attachments
 
     email = resend.Emails.send(params)
     print(email)
@@ -122,77 +110,49 @@ def convert_dict_to_tuple(d):
 @scheduler.task("cron", id="check_github_changes", second="*/5")
 # Function to check for changes in GitHub data
 def check_github_changes():
+    os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
     print("Checking for changes...\n")
 
-    global new_internships, removed_internships
+    latest_data = fetch_json(url)
+    local_data = read_local_json(
+        local_file_path) if os.path.exists(local_file_path) else []
+
+    # Filter internships for the term "Summer 2024"
+    latest_data_filtered = {convert_dict_to_tuple(
+        d) for d in latest_data if "Summer 2024" in d["terms"]}
+    local_data_filtered = {convert_dict_to_tuple(
+        d) for d in local_data if "Summer 2024" in d["terms"]}
+
+    new_internships = [dict(t)
+                       for t in latest_data_filtered - local_data_filtered]
+    removed_internships = [dict(t)
+                           for t in local_data_filtered - latest_data_filtered]
 
     current_time = datetime.now()
+    last_24_hours = current_time - timedelta(days=1)
 
-    latest_data = fetch_json(url)
+    if new_internships:
+        for internship in new_internships:
+            internship["timestamp"] = current_time.isoformat()
+        recent_new_internships = [i for i in new_internships if datetime.fromisoformat(
+            i["timestamp"]) > last_24_hours]
+        write_local_json("new_internships_last_24_hours.json",
+                         recent_new_internships)
+        print("NEW INTERNSHIPS: ", recent_new_internships)
+        send_email("New Internships Added", new_internships)
 
-    if os.path.exists(local_file_path):
-        local_data = read_local_json(local_file_path)
+    if removed_internships:
+        for internship in removed_internships:
+            internship["timestamp"] = current_time.isoformat()
+        recent_removed_internships = [
+            i for i in removed_internships if datetime.fromisoformat(i["timestamp"]) > last_24_hours]
+        write_local_json("removed_internships_last_24_hours.json",
+                         recent_removed_internships)
+        print("REMOVED INTERNSHIPS: ", recent_removed_internships)
+        send_email("Internships Removed", removed_internships)
 
-        if local_data != latest_data:
-            print("Changes detected!\n")
-
-            scheduler.pause()
-
-            # Filter internships for the term "Summer 2024"
-            latest_data_filtered = [
-                d for d in latest_data if "Summer 2024" in d["terms"]]
-            local_data_filtered = [
-                d for d in local_data if "Summer 2024" in d["terms"]]
-
-            # Convert dictionaries to sets of tuples for comparison
-            latest_data_set = {convert_dict_to_tuple(
-                d) for d in latest_data_filtered}
-            local_data_set = {convert_dict_to_tuple(
-                d) for d in local_data_filtered}
-
-            # Find new internships
-            new_internships = [dict(t)
-                               for t in latest_data_set - local_data_set]
-
-            # Find removed internships
-            removed_internships = [dict(t)
-                                   for t in local_data_set - latest_data_set]
-
-            # Find and save new internships
-            if len(new_internships) > 0:
-                for internship in new_internships:
-                    internship["timestamp"] = current_time.isoformat()
-
-                # Filter and write internships from the last 24 hours
-                last_24_hours = current_time - timedelta(days=1)
-                recent_new_internships = [i for i in new_internships if datetime.fromisoformat(
-                    i["timestamp"]) > last_24_hours]
-                write_local_json(
-                    "new_internships_last_24_hours.json", recent_new_internships)
-                print("NEW INTERNSHIPS: ", recent_new_internships, "\n")
-                email_body = f"New internships: {recent_new_internships}"
-                send_email("New Internships Added", email_body)
-
-            # Find and save removed internships
-            if len(removed_internships) > 0:
-                for internship in removed_internships:
-                    internship["timestamp"] = current_time.isoformat()
-
-                # Filter and write removed internships from the last 24 hours
-                last_24_hours = current_time - timedelta(days=1)
-                recent_removed_internships = [
-                    i for i in removed_internships if datetime.fromisoformat(i["timestamp"]) > last_24_hours]
-                write_local_json(
-                    "removed_internships_last_24_hours.json", recent_removed_internships)
-                print("REMOVED INTERNSHIPS: ", recent_removed_internships, "\n")
-                email_body = f"Removed internships: {recent_removed_internships}"
-                send_email("Internships Removed", email_body)
-
-            # Update the local data
-            write_local_json(local_file_path, latest_data)
-            scheduler.resume()
-        else:
-            print("No changes detected.\n")
+    # Update the local data
+    write_local_json(local_file_path, latest_data)
 
 
 @scheduler.task("cron", id="clear_json_files", hour=8)
@@ -218,9 +178,6 @@ def get_all_summer_internships():
     print(f"Filtered {len(summer_internships)} summer internships.")
     return jsonify(summer_internships)
 
-
-email_body = "Removed internships: TEST EMAIL"
-send_email("Internships Removed", email_body)
 
 if __name__ == "__main__":
     app.run()
