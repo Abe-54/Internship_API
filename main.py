@@ -8,10 +8,12 @@ from flask_cors import CORS
 import requests
 import json
 import os
+import resend
 
 TEST_MODE = False  # Set to True to use mock JSON file for testing
 
 app = Flask(__name__)
+resend.api_key = "re_4xqsTDGK_AjPwBCJ77WVuSAE2E3bHrSSq"
 CORS(app)
 
 scheduler = APScheduler()
@@ -27,10 +29,6 @@ local_file_path = "local_listings.json"
 mock_file_path = "mock_listings.json"  # Mock JSON file for testing
 
 # Email configuration
-SMTP_SERVER = "smtp.resend.com"  # Use your SMTP server
-SMTP_PORT = 587
-SMTP_USERNAME = "resend"  # Your email
-SMTP_PASSWORD = "re_4xqsTDGK_AjPwBCJ77WVuSAE2E3bHrSSq"  # Your password
 RECIPIENT_EMAIL = "a.rubio1224@gmail.com"  # Email to receive notifications
 
 # Flask routes
@@ -84,29 +82,23 @@ def fetch_json(url):
             return None
 
 
-def send_email(subject, body):
-    """Send an email notification."""
-    msg = MIMEText(body)
-    msg['From'] = SMTP_USERNAME
-    msg['To'] = RECIPIENT_EMAIL
-    msg['Subject'] = subject
+def send_email(subject, body, attachments=None):
+    """Send an email notification using resend."""
+    params = {
+        "from": "Internship Tracker <onboarding@resend.dev>",
+        "to": [RECIPIENT_EMAIL],
+        "subject": subject,
+        "html": body,
+        "headers": {
+            "X-Entity-Ref-ID": "123456789"
+        }
+    }
 
-    try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        status_code, response = server.ehlo()
-        print(f"[*] Echoing the server: {status_code} {response}")
+    if attachments:
+        params["attachments"] = attachments
 
-        server.starttls()
-        print(f"[*] Starting TLS Connection...: {status_code} {response}")
-
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        print("[*] Logged in successfully: {status_code} {response}")
-
-        server.sendmail(SMTP_USERNAME, RECIPIENT_EMAIL, msg.as_string())
-        server.quit()
-        print("Email sent successfully!")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
+    email = resend.Emails.send(params)
+    print(email)
 
 # Function to read local JSON file
 
@@ -178,8 +170,8 @@ def check_github_changes():
                 write_local_json(
                     "new_internships_last_24_hours.json", recent_new_internships)
                 print("NEW INTERNSHIPS: ", recent_new_internships, "\n")
-                send_email("New Internships Added",
-                           f"New internships: {recent_new_internships}")
+                email_body = f"New internships: {recent_new_internships}"
+                send_email("New Internships Added", email_body)
 
             # Find and save removed internships
             if len(removed_internships) > 0:
@@ -193,8 +185,8 @@ def check_github_changes():
                 write_local_json(
                     "removed_internships_last_24_hours.json", recent_removed_internships)
                 print("REMOVED INTERNSHIPS: ", recent_removed_internships, "\n")
-                send_email("Internships Removed",
-                           f"Removed internships: {recent_removed_internships}")
+                email_body = f"Removed internships: {recent_removed_internships}"
+                send_email("Internships Removed", email_body)
 
             # Update the local data
             write_local_json(local_file_path, latest_data)
@@ -227,8 +219,8 @@ def get_all_summer_internships():
     return jsonify(summer_internships)
 
 
-send_email("New Internships Added",
-           f"New internships: test")
+email_body = "Removed internships: TEST EMAIL"
+send_email("Internships Removed", email_body)
 
 if __name__ == "__main__":
     app.run()
