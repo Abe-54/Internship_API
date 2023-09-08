@@ -10,7 +10,7 @@ import json
 import os
 import resend
 
-TEST_MODE = False  # Set to True to use mock JSON file for testing
+TEST_MODE = True  # Set to True to use mock JSON file for testing
 
 app = Flask(__name__)
 resend.api_key = "re_4xqsTDGK_AjPwBCJ77WVuSAE2E3bHrSSq"
